@@ -64,7 +64,7 @@ object Application extends Controller {
     val interval = system.scheduler.schedule(0 seconds, 1 second) {
       implicit val timeout = Timeout(10 seconds)
       (orenoPomodoro ? InPomodoroNow).mapTo[Boolean].asPromise.map { inPomodoroNow =>
-        writer.println(
+        writer.print(
           if (inPomodoroNow)
             "ポモドーロ中"
           else
