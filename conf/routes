@@ -5,5 +5,8 @@
 # Home page
 GET     /                           controllers.Application.index
 
+GET     /watch/:username            controllers.Application.watch(username: String)
+GET     /status/:username           controllers.Application.status(username: String)
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
