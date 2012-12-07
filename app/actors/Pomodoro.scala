@@ -1,7 +1,7 @@
 package actors
 
 import akka.util.duration._
-import akka.actor.{ActorRef, ActorLogging, Actor}
+import akka.actor.{Cancellable, ActorRef, ActorLogging, Actor}
 import akka.event.{BusLogging, LoggingReceive}
 
 case object InPomodoroNow
@@ -22,21 +22,29 @@ class Pomodoro(repository: ActorRef) extends Actor with ActorLogging {
   var key: Option[String] = None
   var inPomodoroNow = false
   var sessions = Map.empty[String, models.Session]
+  var pomodoroTimer: Option[Cancellable] = None
+  var breakTimer: Option[Cancellable] = None
 
   def startPomodoro() {
     log.debug("Starting a pomodoro: " + this.toString)
     inPomodoroNow = true
-    context.system.scheduler.scheduleOnce(pomodoroDuration) {
-      startBreak()
-    }
+    breakTimer = None
+    pomodoroTimer = Some(
+      context.system.scheduler.scheduleOnce(pomodoroDuration) {
+        startBreak()
+      }
+    )
   }
 
   def startBreak() {
     log.info("Starting a break")
     inPomodoroNow = false
-    context.system.scheduler.scheduleOnce(breakDuration) {
-      startPomodoro()
-    }
+    pomodoroTimer = None
+    breakTimer = Some(
+      context.system.scheduler.scheduleOnce(breakDuration) {
+        startPomodoro()
+      }
+    )
   }
 
   override def preStart() {
@@ -60,5 +68,12 @@ class Pomodoro(repository: ActorRef) extends Actor with ActorLogging {
       case GiveMeKey =>
         sender ! key
     }
+  }
+
+  override def postStop() {
+    super.postStop()
+
+    pomodoroTimer.foreach { t => t.cancel() }
+    breakTimer.foreach { t => t.cancel() }
   }
 }
