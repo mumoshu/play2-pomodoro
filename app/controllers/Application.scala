@@ -11,6 +11,7 @@ import akka.util.{Duration, Timeout}
 import java.io._
 import akka.dispatch.Await
 import actors._
+import java.nio.charset.Charset
 
 object Application extends Controller {
 
@@ -75,9 +76,9 @@ object Application extends Controller {
       (orenoPomodoro ? InPomodoroNow).mapTo[Boolean].asPromise.map { inPomodoroNow =>
         writer.print(
           if (inPomodoroNow)
-            "ポモドーロ中"
+            "ポモドーロ中".getBytes(Charset.forName("UTF-8"))
           else
-            "休憩中"
+            "休憩中".getBytes(Charset.forName("UTF-8"))
         )
         writer.flush()
       }
