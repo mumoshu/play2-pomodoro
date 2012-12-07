@@ -11,7 +11,7 @@
             if (typeof webkitNotifications !== 'undefined') {
                 if (webkitNotifications.checkPermission() !== 0) {
                     var $enableNotificationButton = $('<button id="enable-notification">デスクトップ通知をオンにする</button>');
-                    $("#status").prepend($enableNotificationButton);
+                    $("#status").before($enableNotificationButton);
                     $enableNotificationButton.click(function(){
                         webkitNotifications.requestPermission(function() {
                             if (webkitNotification.checkPermission() === 0) {
