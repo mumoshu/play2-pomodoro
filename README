@@ -8,5 +8,20 @@ This file was modified by IntelliJ IDEA 12.0 for binding GitHub repository
 How to deploy
 =============
 
+1. Install the dotCloud CLI
+
 brew install python
 pip install dotcloud
+
+or
+
+easy_install dotcloud
+
+2. Connect to a dotCloud application
+
+dotcloud create pomodoro
+dotcloud connect pomodoro
+
+3. Deploy the application to dotCloud
+
+dotcloud push

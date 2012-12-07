@@ -1,6 +1,6 @@
 play:
   type: custom
-  buildscript: playframework/builder
+  buildscript: dotcloud/builder
   ports:
     www: http
   process: ~/run
