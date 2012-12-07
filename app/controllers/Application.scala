@@ -7,54 +7,28 @@ import akka.actor._
 import akka.util.duration._
 import akka.pattern._
 import play.api.libs.concurrent._
-import akka.util.Timeout
+import akka.util.{Duration, Timeout}
 import java.io._
-
-case object InPomodoroNow
-
-class OrenoPomodoro extends Actor {
-
-  val pomodoroDuration = 25 seconds
-  val breakDuration = 5 seconds
-
-  var inPomodoroNow = false
-
-  def startPomodoro() {
-    Logger.info("Starting a pomodoro: " + this.toString)
-    inPomodoroNow = true
-    context.system.scheduler.scheduleOnce(pomodoroDuration) {
-      startBreak()
-    }
-  }
-
-  def startBreak() {
-    Logger.info("Starting a break")
-    inPomodoroNow = false
-    context.system.scheduler.scheduleOnce(breakDuration) {
-      startPomodoro()
-    }
-  }
-
-  override def preStart() {
-    super.preStart()
-    startPomodoro()
-  }
-
-  def receive: Receive = {
-    case InPomodoroNow =>
-      sender ! inPomodoroNow
-  }
-}
+import akka.dispatch.Await
+import actors._
 
 object Application extends Controller {
 
-  val system = ActorSystem("pomodoro")
-  val globalOrenoPomodoro = system.actorOf(Props[OrenoPomodoro])
+  val system = {
+    val config = Play.current.configuration.underlying
+    ActorSystem("pomodoro", config.getConfig("pomodoro").withFallback(config))
+  }
+  val actorRepository = system.actorOf(Props[ActorRepository])
+
+  implicit val timeout = Timeout(1 second)
 
   def index = Action {
     Async {
       implicit val timeout = Timeout(10 seconds)
-      (globalOrenoPomodoro ? InPomodoroNow).mapTo[Boolean].asPromise.map { inPomodoroNow =>
+      for {
+        globalOrenoPomodoro <- (actorRepository ? GetPomodoro("global")).mapTo[ActorRef].asPromise
+        inPomodoroNow <- (globalOrenoPomodoro ? InPomodoroNow).mapTo[Boolean].asPromise
+      } yield {
         Ok(
           if (inPomodoroNow)
             "ポモドーロ中"
@@ -69,25 +43,23 @@ object Application extends Controller {
     Ok(views.html.status(username))
   }
 
-  var actors = Map.empty[String, ActorRef]
-
-  def actorForUserName(username: String) = {
-    actors = actors.updated(username, actors.get(username).getOrElse {
-      system.actorOf(Props[OrenoPomodoro])
-    })
-    actors.get(username).get
+  // TODO Make this async not to block current thread
+  def actorForUserName(username: String): ActorRef = {
+    Await.result(actorRepository ? GetPomodoro(username), 10 second).asInstanceOf[ActorRef]
   }
 
   def watch(username: String) = WebSocket.using[String] { req =>
 
+  // Start an actor
+    val orenoPomodoro = actorForUserName(username)
+
+    val session = models.Session.create
+
+    orenoPomodoro ! Connect(session)
+
     val outputStream = new PipedOutputStream()
     val inputStream = new PipedInputStream(outputStream)
     val writer = new PrintWriter(outputStream)
-
-    // Start an actor
-    val orenoPomodoro = actorForUserName(username)
-
-    val out: Enumerator[String] = Enumerator.fromStream(inputStream).map(bytes => new String(bytes, "UTF-8"))
 
     val interval = system.scheduler.schedule(0 seconds, 1 second) {
       implicit val timeout = Timeout(10 seconds)
@@ -102,8 +74,11 @@ object Application extends Controller {
       }
     }
 
+    val out: Enumerator[String] = Enumerator.fromStream(inputStream).map(bytes => new String(bytes, "UTF-8"))
+
     val in = Iteratee.foreach[String](println).mapDone { _ =>
       println("Disconnected")
+      orenoPomodoro ! Disconnect(session)
       interval.cancel()
     }
 
