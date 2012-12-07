@@ -17,23 +17,24 @@ class ActorRepository extends Actor with ActorLogging {
 
   def receive: Receive = {
     LoggingReceive {
-      case EveryoneDisconnected(pomodoro: ActorRef) =>
+      case EveryoneDisconnected(pomodoro) =>
         (pomodoro ? GiveMeKey).mapTo[Option[String]].map {
           case Some(key) =>
             context.stop(pomodoro)
             // TODO Make this atomic
             actors -= key
-            log.debug("actors: " + actors)
+            log.debug("actors after clean-up: " + actors)
           case _ =>
             throw new RuntimeException("Key is not set for the pomodoro actor: " + pomodoro)
         }
       case m @ GetPomodoro(username: String) =>
         log.info(m.toString)
         val actor = actors.get(username).getOrElse(
-          context.actorOf(Props[Pomodoro], "pomodoro-" + username)
+          context.actorOf(Props(new Pomodoro(self)), "pomodoro-" + username)
         )
         // TODO Make this atomic
         actors += username -> actor
+        log.debug("actors: " + actors)
         val preservedSender = sender
         (actor ? SetKey(username)).mapTo[String].map { _ =>
           preservedSender ! actor

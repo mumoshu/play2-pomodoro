@@ -1,20 +1,20 @@
 package actors
 
 import akka.util.duration._
-import akka.actor.{ActorLogging, Actor}
+import akka.actor.{ActorRef, ActorLogging, Actor}
 import akka.event.{BusLogging, LoggingReceive}
 
 case object InPomodoroNow
 case class Connect(session: models.Session)
 case class Disconnect(session: models.Session)
-case class EveryoneDisconnected(pomodoro: Pomodoro)
+case class EveryoneDisconnected(pomodoro: ActorRef)
 case object GiveMeKey
 case class SetKey(key: String)
 
 /**
  * Stateful actors for Pomodoro timers
  */
-class Pomodoro extends Actor with ActorLogging {
+class Pomodoro(repository: ActorRef) extends Actor with ActorLogging {
 
   val pomodoroDuration = 25 seconds
   val breakDuration = 5 seconds
@@ -53,7 +53,7 @@ class Pomodoro extends Actor with ActorLogging {
       case Disconnect(session) =>
         sessions -= session.uuid
         if (sessions.isEmpty)
-          context.stop(self)
+          repository ! EveryoneDisconnected(self)
       case SetKey(newKey) =>
         key = Some(newKey)
         sender ! newKey
