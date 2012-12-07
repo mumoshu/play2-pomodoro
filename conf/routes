@@ -5,8 +5,8 @@
 # Home page
 GET     /                           controllers.Application.index
 
-GET     /watch/:username            controllers.Application.watch(username: String)
-GET     /status/:username           controllers.Application.status(username: String)
+GET     /watch/:username            controllers.Application.watch(username: String, pomodoro: String ?= "25 minutes", break: String ?= "5 minutes")
+GET     /status/:username           controllers.Application.status(username: String, pomodoro: String ?= "25 minutes", break: String ?= "5 minutes")
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

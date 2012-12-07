@@ -1,4 +1,4 @@
-@(username: String)(implicit request: Request[AnyContent])
+@(username: String, pomodoro: String, break: String)(implicit request: Request[AnyContent])
 
 @main(username + "のポモドーロ") {
 
@@ -25,7 +25,7 @@
             }
 
             var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
-            var sock = new WS("@controllers.routes.Application.watch(username).webSocketURL()");
+            var sock = new WS("@controllers.routes.Application.watch(username, pomodoro, break).webSocketURL()");
 
             var lastData;
             sock.onmessage = function(event) {

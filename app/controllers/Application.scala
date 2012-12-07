@@ -39,19 +39,28 @@ object Application extends Controller {
     }
   }
 
-  def status(username: String) = Action { implicit request =>
-    Ok(views.html.status(username))
+  /**
+   *
+   * @param username the name of this pomodoro's owner
+   * @param pomodoro the duration of each pomodoro in text e.g. "25 minutes", "1500 seconds"
+   * @param break the duration of of each break in text e.g. "5 minutes", "300 seconds"
+   * @return
+   */
+  def status(username: String, pomodoro: String, break: String) = Action { implicit request =>
+    Ok(views.html.status(username, pomodoro, break))
   }
 
   // TODO Make this async not to block current thread
-  def actorForUserName(username: String): ActorRef = {
-    Await.result(actorRepository ? GetPomodoro(username), 10 second).asInstanceOf[ActorRef]
+  def getOrCreateActor(msg: GetPomodoro): ActorRef = {
+    Await.result(actorRepository ? msg, 10 second).asInstanceOf[ActorRef]
   }
 
-  def watch(username: String) = WebSocket.using[String] { req =>
+  def watch(username: String, pomodoro_duration: String, break_duration: String) = WebSocket.using[String] { req =>
 
   // Start an actor
-    val orenoPomodoro = actorForUserName(username)
+    val orenoPomodoro = getOrCreateActor(
+      GetPomodoro(username, Duration.parse(pomodoro_duration), Duration.parse(break_duration))
+    )
 
     val session = models.Session.create
 

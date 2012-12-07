@@ -3,6 +3,7 @@ package actors
 import akka.util.duration._
 import akka.actor.{Cancellable, ActorRef, ActorLogging, Actor}
 import akka.event.{BusLogging, LoggingReceive}
+import akka.util.Duration
 
 case object InPomodoroNow
 case class Connect(session: models.Session)
@@ -14,10 +15,7 @@ case class SetKey(key: String)
 /**
  * Stateful actors for Pomodoro timers
  */
-class Pomodoro(repository: ActorRef) extends Actor with ActorLogging {
-
-  val pomodoroDuration = 25 seconds
-  val breakDuration = 5 seconds
+case class Pomodoro(repository: ActorRef, pomodoroDuration: Duration = 25 minutes, breakDuration: Duration = 5 minutes) extends Actor with ActorLogging {
 
   var key: Option[String] = None
   var inPomodoroNow = false
