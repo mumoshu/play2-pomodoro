@@ -27,11 +27,19 @@
             var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket;
             var sock = new WS("@controllers.routes.Application.watch(username, pomodoro, break).webSocketURL()");
 
-            var lastData;
+            var lastData,
+                notification;
             sock.onmessage = function(event) {
                 $('#status').text(event.data + ' (最終更新日時:' + new Date() + ')');
-                if (lastData != event.data && event.data == '休憩中' && webkitNotifications.checkPermission() == 0) {
-                    webkitNotifications.createNotification(undefined, 'みんなのポモドーロ', event.data).show();
+                if (lastData != event.data && webkitNotifications.checkPermission() == 0) {
+
+                    if (event.data == '休憩中' ) {
+                        notification = webkitNotifications.createNotification(undefined, 'みんなのポモドーロ', event.data);
+                        notification.show();
+                    } else if (notification) {
+                        notification.cancel();
+                        notification = null;
+                    }
                 }
                 lastData = event.data;
             };
